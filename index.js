@@ -1,10 +1,26 @@
 const { Client, LocalAuth} = require('whatsapp-web.js');
 const express = require('express');
 const app = express();
-const port = 3001;
+let port = 3001;
+let clientId = '1';
+
+process.argv.forEach(arg => {
+  const match = arg.match(/^--(.+)=(.+)$/);
+  if (!match)
+    return;
+
+  switch (match[1] || '') {
+    case 'port':
+      port = match[2];
+      break;
+    case 'clientId':
+      clientId = match[2];
+      break;
+  }
+});
 
 const client = new Client({
-  authStrategy: new LocalAuth({clientId: '1'}),
+  authStrategy: new LocalAuth({clientId}),
   puppeteer: { headless: false }
 });
 
@@ -27,11 +43,7 @@ client.on('auth_failure', msg => {
   // Fired if session restore was unsuccessful
   console.error('AUTHENTICATION FAILURE', msg);
 });
-/*
-client.on('ready', () => {
-  client.sendMessage('79774884810@c.us', 'test test');
-});
-*/
+
 client.on('message_revoke_everyone', async (after, before) => {
   // Fired whenever a message is deleted by anyone (including you)
   console.log(after); // message after it was deleted.
