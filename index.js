@@ -73,13 +73,17 @@ client.on('disconnected', (reason) => {
 
 app.use(express.json());
 app.post('/send', (req, res) => {
-  if (!ready) {
-    res.status(425).send('Client not ready');
-    return;
+  try {
+    if (!ready) {
+      res.status(425).send('Client not ready');
+      return;
+    }
+    const body = req.body;
+    client.sendMessage(`${body.phone}@c.us`, body.content, body.options || {});
+    res.send('Sent');
+  } catch (e) {
+    console.error(e);
   }
-  const body = req.body;
-  client.sendMessage(`${body.phone}@c.us`, body.content, body.options || {});
-  res.send('Sent')
 })
 
 app.listen(port, () => {
