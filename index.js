@@ -3,6 +3,7 @@ const express = require('express');
 const app = express();
 let port = 3001;
 let clientId = '1';
+let headless = false;
 
 process.argv.forEach(arg => {
   const match = arg.match(/^--(.+)=(.+)$/);
@@ -16,15 +17,24 @@ process.argv.forEach(arg => {
     case 'clientId':
       clientId = match[2];
       break;
+    case 'headless':
+      headless = match[2] === 'true';
+      break;
   }
 });
 
 const client = new Client({
   authStrategy: new LocalAuth({clientId}),
-  puppeteer: { headless: false }
+  puppeteer: { headless },
 });
 
 client.initialize();
+let ready = false;
+
+client.on('ready', () => {
+  console.log('Client is ready!');
+  ready = true;
+});
 
 client.on('loading_screen', (percent, message) => {
   console.log('LOADING SCREEN', percent, message);
@@ -63,6 +73,10 @@ client.on('disconnected', (reason) => {
 
 app.use(express.json());
 app.post('/send', (req, res) => {
+  if (!ready) {
+    res.status(425).send('Client not ready');
+    return;
+  }
   const body = req.body;
   client.sendMessage(`${body.phone}@c.us`, body.content, body.options || {});
   res.send('Sent')
