@@ -1,4 +1,4 @@
-const { Client, LocalAuth} = require('whatsapp-web.js');
+const { Client, LocalAuth, MessageMedia} = require('whatsapp-web.js');
 const express = require('express');
 const app = express();
 let port = 3001;
@@ -72,14 +72,30 @@ client.on('disconnected', (reason) => {
 
 
 app.use(express.json());
-app.post('/send', (req, res) => {
+app.post('/send', async (req, res) => {
   try {
     if (!ready) {
       res.status(425).send('Client not ready');
       return;
     }
     const body = req.body;
-    client.sendMessage(`${body.phone}@c.us`, body.content, body.options || {});
+
+    const sendMessage = async (content) => {
+      if (content instanceof Array) {
+        for(contentItem of content) {
+          await sendMessage(contentItem);
+        }
+      } else {
+        if (content instanceof Object && content.url){
+          content = await MessageMedia.fromUrl(content.url);
+        }
+
+        await client.sendMessage(`${body.phone}@c.us`, content, body.options || {});
+      }
+    };
+
+    sendMessage(body.content);
+
     res.send('Sent');
   } catch (e) {
     console.error(e);
