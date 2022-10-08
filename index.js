@@ -23,52 +23,49 @@ process.argv.forEach(arg => {
   }
 });
 
-const client = new Client({
-  authStrategy: new LocalAuth({clientId}),
-  puppeteer: { headless },
-});
 
-client.initialize();
 let ready = false;
+let client;
 
-client.on('ready', () => {
-  console.log('Client is ready!');
-  ready = true;
-});
+const init = () => {
+  client = new Client({
+    authStrategy: new LocalAuth({clientId}),
+    puppeteer: { headless },
+  });
 
-client.on('loading_screen', (percent, message) => {
-  console.log('LOADING SCREEN', percent, message);
-});
+  client.initialize();
 
-client.on('qr', (qr) => {
-  // NOTE: This event will not be fired if a session is specified.
-  console.log('QR RECEIVED', qr);
-});
+  client.on('ready', () => {
+    console.log('Client is ready!');
+    ready = true;
+    client.pupPage.on('framenavigated', function () {
+      console.log("page reloaded!");
+      ready = false;
+      client.destroy();
+      init();
+    });
+  });
 
-client.on('authenticated', () => {
-  console.log('AUTHENTICATED');
-});
+  client.on('qr', (qr) => {
+    console.log('QR RECEIVED', qr);
+  });
 
-client.on('auth_failure', msg => {
-  // Fired if session restore was unsuccessful
-  console.error('AUTHENTICATION FAILURE', msg);
-});
 
-client.on('message_revoke_everyone', async (after, before) => {
-  // Fired whenever a message is deleted by anyone (including you)
-  console.log(after); // message after it was deleted.
-  if (before) {
-    console.log(before); // message before it was deleted.
-  }
-});
-
-client.on('change_state', state => {
-  console.log('CHANGE STATE', state );
-});
-
-client.on('disconnected', (reason) => {
-  console.log('Client was logged out', reason);
-});
+  const waitInitFunction = () => {
+    if (client.pupPage) {
+      client.pupPage.on('error', function(err) {
+        console.log(err);
+        ready = false;
+        client.destroy();
+        init();
+      });
+    } else {
+      setTimeout(waitInitFunction, 1000);
+    }
+  };
+  waitInitFunction();
+};
+init();
 
 
 app.use(express.json());
