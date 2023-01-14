@@ -84,7 +84,7 @@ app.post('/send', async (req, res) => {
         }
       } else {
         if (content instanceof Object && content.url){
-          content = await MessageMedia.fromUrl(content.url);
+          content = await MessageMedia.fromUrl(content.url, {unsafeMime: true});
         }
 
         await client.sendMessage(`${body.phone}@c.us`, content, body.options || {});
